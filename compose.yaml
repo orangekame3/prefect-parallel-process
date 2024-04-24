@@ -1,0 +1,39 @@
+version: '3.9'
+services:
+
+  postgres:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: prefect
+      POSTGRES_DB: prefect
+    ports:
+      - "5432:5432"
+
+  server:
+    image: prefecthq/prefect:2-python3.11
+    restart: always
+    volumes:
+      - prefect:/root/.prefect
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["prefect server start --host 0.0.0.0"]
+    ports:
+      - "4200:4200"
+    environment:
+    - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:prefect@postgres:5432/prefect
+    depends_on:
+      - postgres
+
+  flow:
+    build: ./prefect-parallel-process/
+    restart: always
+    volumes:
+      - ./prefect-parallel-process:/app
+    depends_on:
+      - server
+    ports:
+      - "8080:8080"
+
+volumes:
+  prefect:
